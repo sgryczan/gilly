@@ -1,4 +1,5 @@
 # Gilly
+![](./img/logo.png)
 *noun; a truck or wagon used to transport the equipment of a circus or carnival.*
 
 Gilly is a tool meant for fixing Kubernetes workloads for hosts running under BigTop, that reference images from gcr.io or quay.io.
@@ -59,7 +60,7 @@ docker.repo.eng.netapp.com/sgryczan/ansible-runner:0.0.0
 ```
 There are a few reasons we **dont want to do this**:
 
-* **Every workload will need to be modified in this way**- this will include control plane components as well, as those are referenced from k8s.gcr.io. Such a change requires rewriting a ton of workloads, which presents a significant effort. Furthermore, if the manifests are rendered by a tool such as `kustomize` or `helm`, the image tags may not be exposed in such a way to allow this to be done easily.
+* **Every workload will need to be modified in this way**- this will include control plane components as well, as those are referenced from k8s.gcr.io. Such a change requires rewriting a ton of workloads, which presents a significant effort. Furthermore, if the manifests are rendered by a tool such as `kustomize` or `helm`, the image tags may not be exposed in such a way to allow this to be done without manual modification.
 
 * **The registry mirror clobbers the upstream registry**. Essentially, each mirrored registry is checked sequentially when pulling images. This means that effectively, each image pulled through the mirror is tagged to either docker.io, or the mirror. This obscures the original registry of the image. Since this is part of the FQDN used to identify the image, it becomes impossible to determine which upstream registry the image is actually being pulled from.
 
@@ -79,3 +80,17 @@ Status: Image is up to date for linkerd-io/proxy:stable-2.7.1
 docker.io/linkerd-io/proxy:stable-2.7.1
 ```
 * Even though `docker.io/linkerd-io/proxy:stable-2.7.1` doesn't actually exist!
+
+
+
+
+
+
+I created the following cluster daemon (Gilly) to help us work around this:
+
+https://bitbucket.ngage.netapp.com/projects/HCIT/repos/gilly/browse
+
+
+Gilly runs a daemon on each worker in the cluster. Each daemon will connect to the Kubelet service on the host under which it is running, and will look for pods that are failing with `ImagePullbackOff` or `ErrImagePull` errors.
+
+It will then attempt to fix these images by pulling the image through the mirror, and re-tagging the mirrored image back to the original name. Once this is done, the Kubelet can start the pod, since the referenced image is now accessible by the daemon. 
