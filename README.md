@@ -1,5 +1,6 @@
 # Gilly
 ![](./img/logo.png)
+
 *noun; a truck or wagon used to transport the equipment of a circus or carnival.*
 
 Gilly is a tool meant for fixing Kubernetes workloads for hosts running under BigTop, that reference images from gcr.io or quay.io.
