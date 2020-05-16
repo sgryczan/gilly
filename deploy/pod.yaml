@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp2
+  labels:
+    name: myapp
+spec:
+  nodeName: hg-sre-devel-worker10
+  containers:
+  - name: myapp
+    image: gcr.io/sgryczan/ansible-runner:0.0.0
