@@ -83,15 +83,3 @@ docker.io/linkerd-io/proxy:stable-2.7.1
 * Even though `docker.io/linkerd-io/proxy:stable-2.7.1` doesn't actually exist!
 
 
-
-
-
-
-I created the following cluster daemon (Gilly) to help us work around this:
-
-https://bitbucket.ngage.netapp.com/projects/HCIT/repos/gilly/browse
-
-
-Gilly runs a daemon on each worker in the cluster. Each daemon will connect to the Kubelet service on the host under which it is running, and will look for pods that are failing with `ImagePullbackOff` or `ErrImagePull` errors.
-
-It will then attempt to fix these images by pulling the image through the mirror, and re-tagging the mirrored image back to the original name. Once this is done, the Kubelet can start the pod, since the referenced image is now accessible by the daemon. 
