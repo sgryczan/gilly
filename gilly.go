@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"net/http"
 	"time"
 
 	"bitbucket.ngage.netapp.com/scm/hcit/gilly/lib"
@@ -10,28 +11,20 @@ import (
 var kubeletEndpoint string
 
 func main() {
-	client, err := lib.NewConnection()
-	if err != nil {
-		log.Fatalf("Failed to establish connection to Kubelet: %v", err)
-	}
-	log.Printf("[Main]  host: %s", client.EndPoint)
-	//log.Printf("token: %s", client.Token)
-	for {
-		//Get current running pods from kubelet (http://localhost:10250/pods)
-		pods, err := client.GetPods()
-		if err != nil {
-			log.Fatalf("Failed to get running pods: %v", err)
-		}
 
-		// Determine if any pods are in targeted states
-		brokenContainers, err := lib.GetBrokenContainers(pods)
-		if err != nil {
-			log.Fatalf("Failed to get running pods: %v", err)
-		}
+	mux := http.NewServeMux()
 
-		// For affected images, run docker commands to fix
-		go lib.PullandRetag(brokenContainers)
-		log.Printf("[Main]  Checks done. Sleeping for awhile")
-		time.Sleep(time.Second * 300)
+	mux.HandleFunc("/", lib.HandleRoot)
+	mux.HandleFunc("/mutate", lib.HandleMutate)
+
+	s := &http.Server{
+		Addr:           ":8443",
+		Handler:        mux,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20, // 1048576
 	}
+
+	log.Printf("[Gilly]  started")
+	log.Fatal(s.ListenAndServeTLS("./ssl/gilly.pem", "./ssl/gilly.key"))
 }

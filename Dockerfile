@@ -18,5 +18,6 @@ EXPOSE 8080
 
 WORKDIR /go/bin
 COPY --from=builder /go/bin/app /go/bin/app
+COPY ssl ssl
 
 ENTRYPOINT ["./app"]

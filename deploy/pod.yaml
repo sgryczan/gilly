@@ -5,7 +5,8 @@ metadata:
   labels:
     name: myapp
 spec:
-  nodeName: hg-sre-devel-worker10
+  #nodeName: hg-sre-devel-worker10
   containers:
   - name: myapp
-    image: gcr.io/sgryczan/ansible-runner:0.0.0
+    image: gcr.io/sgryczan/rocket:latest
+    imagePullPolicy: IfNotPresent
