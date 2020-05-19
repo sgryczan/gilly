@@ -12,8 +12,8 @@ RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o /go/bin/app
 FROM alpine
 
 RUN apk update && apk add --no-cache \
-    ca-certificates \
-    docker-cli
+    ca-certificates
+    
 EXPOSE 8080
 
 WORKDIR /go/bin

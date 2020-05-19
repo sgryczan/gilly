@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-dockerhub
+spec:
+  #nodeName: hg-sre-devel-worker10
+  containers:
+  - name: test-dh
+    image: sgryczan/rocket:latest
+    imagePullPolicy: IfNotPresent

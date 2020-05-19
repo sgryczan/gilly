@@ -38,7 +38,7 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 			return nil, fmt.Errorf("unable unmarshal pod json object %v", err)
 		}
 
-		log.Printf("[Mutate]  Received POD create event. Name: %s, Host: %s", pod.ObjectMeta.Name, pod.Spec.NodeName)
+		log.Printf("[Mutate]  Received POD create event. Name: %s, Namespace: %s", pod.ObjectMeta.Name, pod.ObjectMeta.Namespace)
 		resp.Allowed = true
 		resp.UID = ar.UID
 		pT := v1beta1.PatchTypeJSONPatch
@@ -53,7 +53,8 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 		for i, c := range pod.Spec.Containers {
 
 			registry := GetImageRegistry(c.Image)
-			if registry != "docker.io" || !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
+			log.Printf("[Mutate]  Found registry => %s", registry)
+			if registry != "docker.io" && !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
 				log.Printf("[Mutate] image registry for container %s is %s - updating", c.Name, registry)
 				patchedRegistry, _ := ReplaceImageRegistry(c.Image, "docker.repo.eng.netapp.com")
 				imagePatch := map[string]string{
@@ -91,4 +92,31 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 	}
 
 	return responseBody, nil
+}
+
+// GetImageRegistry accepts an image name and returns it's registry
+func GetImageRegistry(image string) string {
+	// gcr.io/linkerd-io/image:tag
+	chunk := strings.Split(image, "/")
+	if strings.Contains(chunk[0], ".") {
+		return chunk[0]
+	}
+	return "docker.io"
+}
+
+// ReplaceImageRegistry accepts an image name and returns it's registry
+func ReplaceImageRegistry(image string, registry string) (string, error) {
+	log.Printf("[ReplaceImageRegistry]  Replacing registry for image %s with %s", image, registry)
+	// gcr.io/linkerd-io/image:tag
+	chunk := strings.Split(image, "/")
+	//log.Printf("[ReplaceImageRegistry]  got chunks: %v", chunk)
+	if !(strings.Contains(chunk[0], ".")) {
+		fmt.Printf("[ReplaceImageRegistry]  Image %s uses inferred registry", image)
+		// Image was passed with no registry e.g. sgryczan/hello-world:0.0.0
+		return registry + "/" + image, nil
+	}
+	// Image was passed with a registry e.g. gcr.io/sgryczan/hello-world:0.0.0
+	result := registry + "/" + strings.Join(chunk[1:], "/")
+	log.Printf("[ReplaceImageRegistry]  Image %s => %s", image, result)
+	return result, nil
 }
