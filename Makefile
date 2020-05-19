@@ -1,6 +1,9 @@
 build:
 	docker build -t sgryczan/gilly:0.1.0 .
 
+build-bigtop:
+	docker build -t sgryczan/gilly:0.1.0 -f Dockerfile.bigtop .
+
 push:
 	docker push sgryczan/gilly:0.1.0 
 build-bin:
