@@ -74,7 +74,7 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 			}
 		}
 
-		if len(pod.Spec.InitContainers) > 1 {
+		if len(pod.Spec.InitContainers) > 0 {
 			for i, c := range pod.Spec.InitContainers {
 
 				registry := GetImageRegistry(c.Image)
