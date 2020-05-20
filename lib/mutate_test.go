@@ -514,6 +514,7 @@ func TestReplaceImageRegistry(t *testing.T) {
 		{"sf-artifactory.solidfire.net:9004/pixiecore-dynamic-rom:0.0.10", "gcr.io", "gcr.io/pixiecore-dynamic-rom:0.0.10"},
 		{"python", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/python"},
 		{"library/python", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/library/python"},
+		{"quay.io/some-owner/image-name", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/some-owner/image-name"},
 	}
 	for _, test := range cases {
 		if r, err := ReplaceImageRegistry(test.inputImage, test.inputRegistry); r != test.expected || err != nil {
