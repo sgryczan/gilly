@@ -74,27 +74,29 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 			}
 		}
 
-		for i, c := range pod.Spec.InitContainers {
+		if len(pod.Spec.InitContainers) > 1 {
+			for i, c := range pod.Spec.InitContainers {
 
-			registry := GetImageRegistry(c.Image)
-			log.Printf("[Mutate]  Found registry => %s", registry)
-			if !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
-				log.Printf("[Mutate] image registry for container %s is %s - updating", c.Name, registry)
-				patchedRegistry, _ := ReplaceImageRegistry(c.Image, "docker.repo.eng.netapp.com")
-				imagePatch := map[string]string{
-					"op":    "replace",
-					"path":  fmt.Sprintf("/spec/initcontainers/%d/image", i),
-					"value": patchedRegistry,
-				}
-				p = append(p, imagePatch)
+				registry := GetImageRegistry(c.Image)
+				log.Printf("[Mutate]  Found registry => %s", registry)
+				if !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
+					log.Printf("[Mutate] image registry for container %s is %s - updating", c.Name, registry)
+					patchedRegistry, _ := ReplaceImageRegistry(c.Image, "docker.repo.eng.netapp.com")
+					imagePatch := map[string]string{
+						"op":    "replace",
+						"path":  fmt.Sprintf("/spec/initcontainers/%d/image", i),
+						"value": patchedRegistry,
+					}
+					p = append(p, imagePatch)
 
-				annotationPatch := map[string]string{
-					"op":    "add",
-					"path":  "/metadata/annotations/gilly-init-original-image",
-					"value": c.Image,
+					annotationPatch := map[string]string{
+						"op":    "add",
+						"path":  "/metadata/annotations/gilly-init-original-image",
+						"value": c.Image,
+					}
+					p = append(p, annotationPatch)
+					log.Printf("[Mutate] updated registry for container %s to %s - updating", c.Name, patchedRegistry)
 				}
-				p = append(p, annotationPatch)
-				log.Printf("[Mutate] updated registry for container %s to %s - updating", c.Name, patchedRegistry)
 			}
 		}
 
