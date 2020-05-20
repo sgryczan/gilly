@@ -359,7 +359,7 @@ func TestMutatesRequestNoRegistry(t *testing.T) {
 	assert.NoError(t, err, "failed to unmarshal with error %s", err)
 
 	rr := r.Response
-	assert.Equal(t, "[]", string(rr.Patch))
+	assert.Equal(t, "[{\"op\":\"replace\",\"path\":\"/spec/containers/0/image\",\"value\":\"docker.repo.eng.netapp.com/sgryczan/rocket:latest\"},{\"op\":\"add\",\"path\":\"/metadata/annotations/gilly-original-image\",\"value\":\"sgryczan/rocket:latest\"}]", string(rr.Patch))
 	assert.Contains(t, rr.AuditAnnotations, "gilly")
 }
 
@@ -512,6 +512,8 @@ func TestReplaceImageRegistry(t *testing.T) {
 	cases := []struct{ inputImage, inputRegistry, expected string }{
 		{"gcr.io/sgryczan/hello-world:0.0.0", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/sgryczan/hello-world:0.0.0"},
 		{"sf-artifactory.solidfire.net:9004/pixiecore-dynamic-rom:0.0.10", "gcr.io", "gcr.io/pixiecore-dynamic-rom:0.0.10"},
+		{"python", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/python"},
+		{"library/python", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/library/python"},
 	}
 	for _, test := range cases {
 		if r, err := ReplaceImageRegistry(test.inputImage, test.inputRegistry); r != test.expected || err != nil {

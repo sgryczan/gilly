@@ -54,7 +54,7 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 
 			registry := GetImageRegistry(c.Image)
 			log.Printf("[Mutate]  Found registry => %s", registry)
-			if registry != "docker.io" && !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
+			if !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
 				log.Printf("[Mutate] image registry for container %s is %s - updating", c.Name, registry)
 				patchedRegistry, _ := ReplaceImageRegistry(c.Image, "docker.repo.eng.netapp.com")
 				imagePatch := map[string]string{
@@ -115,8 +115,13 @@ func ReplaceImageRegistry(image string, registry string) (string, error) {
 		// Image was passed with no registry e.g. sgryczan/hello-world:0.0.0
 		return registry + "/" + image, nil
 	}
-	// Image was passed with a registry e.g. gcr.io/sgryczan/hello-world:0.0.0
-	result := registry + "/" + strings.Join(chunk[1:], "/")
+	if len(chunk) > 1 {
+		// Image was passed with a registry e.g. gcr.io/sgryczan/hello-world:0.0.0
+		result := registry + "/" + strings.Join(chunk[1:], "/")
+		log.Printf("[ReplaceImageRegistry]  Image %s => %s", image, result)
+		return result, nil
+	}
+	result := registry + "/" + chunk[0]
 	log.Printf("[ReplaceImageRegistry]  Image %s => %s", image, result)
 	return result, nil
 }
