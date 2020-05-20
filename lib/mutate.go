@@ -83,7 +83,7 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 				patchedRegistry, _ := ReplaceImageRegistry(c.Image, "docker.repo.eng.netapp.com")
 				imagePatch := map[string]string{
 					"op":    "replace",
-					"path":  fmt.Sprintf("/spec/containers/%d/image", i),
+					"path":  fmt.Sprintf("/spec/initcontainers/%d/image", i),
 					"value": patchedRegistry,
 				}
 				p = append(p, imagePatch)
