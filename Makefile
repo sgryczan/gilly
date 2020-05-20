@@ -18,12 +18,15 @@ build-bin:
 kube-get-ca-bundle:
 	kubectl config view --raw --minify --flatten -o jsonpath='{.clusters[].cluster.certificate-authority-data}'
 
+k3d-deps:
+	docker pull docker.repo.eng.netapp.com/rancher/pause:3.1 && \
+	docker tag docker.repo.eng.netapp.com/rancher/pause:3.1 docker.io/rancher/pause:3.1 && \
+	k3d import-images docker.io/rancher/pause:3.1
+	
 k3d-build:
 	make ssl && \
 	make build-bigtop && \
 	k3d import-images sgryczan/gilly:$(VERSION) && \
-	docker pull docker.repo.eng.netapp.com/rancher/pause:3.1 && \
-	docker tag docker.repo.eng.netapp.com/rancher/pause:3.1 docker.io/rancher/pause:3.1 && \
-	k3d import-images docker.io/rancher/pause:3.1
+	make k3d-deps
 
 .PHONY: build build-bigtop ssl push build-bin kube-get-ca-bundle
