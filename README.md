@@ -26,35 +26,45 @@ myapp   0/1     ImagePullBackOff    2          3m30s
 ```
 
 ### How Gilly Works
-Gilly runs a daemon on each worker in the cluster. Each daemon will [connect to the Kubelet service](https://github.com/kubernetes/kubernetes/blob/master/pkg/kubelet/server/server.go#L300-L314) on the host under which it is running, and will look for pods that are failing with `ImagePullbackOff` or `ErrImagePull` errors. 
+Gilly runs registers itself as an API against it's cluster, using a Mutating Admission Webhook. Essentially, it instructs the Kubernetes API to notify the api every time a pod is created in the cluster. The API will send an AdmissionReview, including the spec of the Pod to be created. Gilly will modify the image field of these new pods automatically, and will respond to the API server with an AdmissionResponse, specifying how the image fields in the Pod definition should be modified.
 
-It will then attempt to fix these images by pulling the image through the mirror, and re-tagging the mirrored image back to the original name. Once this is done, the Kubelet can start the pod, since the referenced image is now accessible by the daemon.
 
 ### Example Output
 
+If we create the following pod:
+
 ```
-2020/05/16 01:11:53 [NewConnection]  Established connection to kubelet
-2020/05/16 01:11:53 [Main]  host: https://hg-sre-devel-worker10:10250
-2020/05/16 01:11:53 [GetPods]  Pulled 12 running pods.
-2020/05/16 01:11:53 [Validate]  Detected pod myapp in Pending state.
-2020/05/16 01:11:53 [Validate]  Detected container myapp in pod myapp status is ImagePullBackOff
-2020/05/16 01:11:53 [Validate]  Detected container myapp in pod myapp reason: ImagePullBackOff
-2020/05/16 01:11:53 [Validate]  Checked 12 Pods, found 1 waiting
-2020/05/16 01:11:53 [Main]  Checks done. Sleeping for awhile
-2020/05/16 01:11:53 [ReplaceImageRegistry]  got chunks: [gcr.io sgryczan ansible-runner:0.0.0]
-2020/05/16 01:11:53 [PullImage]  pulling image: docker.repo.eng.netapp.com/sgryczan/ansible-runner:0.0.0
-2020/05/16 01:11:54 [TagImage] tagged image: docker.repo.eng.netapp.com/sgryczan/ansible-runner:0.0.0 to gcr.io/sgryczan/ansible-runner:0.0.0
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp2
+spec:
+  containers:
+  - name: myapp
+    image: gcr.io/sgryczan/rocket:latest
 ```
 
-Now our pod is running:
+Gilly will modify the image field to reference the mirror:
+
+```
+2020/05/20 14:37:22 [Gilly]  started
+2020/05/20 14:37:33 [Mutate]  Received POD create event. Name: myapp2, Namespace: default
+2020/05/20 14:37:33 [Mutate]  Found registry => gcr.io
+2020/05/20 14:37:33 [Mutate] image registry for container myapp is gcr.io - updating
+2020/05/20 14:37:33 [ReplaceImageRegistry]  Replacing registry for image gcr.io/sgryczan/rocket:latest with docker.repo.eng.netapp.com
+2020/05/20 14:37:33 [ReplaceImageRegistry]  Image gcr.io/sgryczan/rocket:latest => docker.repo.eng.netapp.com/sgryczan/rocket:latest
+2020/05/20 14:37:33 [Mutate] updated registry for container myapp to docker.repo.eng.netapp.com/sgryczan/rocket:latest
+```
+
+Now our pod can run:
 ```
 NAME    READY   STATUS     RESTARTS   AGE
 myapp   1/1     Running    2          3m30s
 ```
 
 
-### Why not just rename the image?
-We could update the `image:` field to reference the image through the mirror, e.g.:
+### Why not just rename the image manually?
+We could manually update the `image:` field to reference the image through the mirror, e.g.:
 ```
 gcr.io/sgryczan/ansible-runner:0.0.0 ->
 docker.repo.eng.netapp.com/sgryczan/ansible-runner:0.0.0
@@ -72,14 +82,14 @@ For example, if I want to pull this image: `docker pull gcr.io/linkerd-io/proxy:
 $ docker pull gcr.io/linkerd-io/proxy:stable-2.7.1
 Error response from daemon: received unexpected HTTP status: 503 Service Unavailable
 ```
-* But pulling via the mirror works by replacing the registry domain with docker.io or docker.repo.eng.netapp.com:
+* But pulling via the mirror works by replacing the registry domain with docker.repo.eng.netapp.com:
 ```
-$ docker pull docker.io/linkerd-io/proxy:stable-2.7.1
+$ docker pull docker.repo.eng.netapp.com/linkerd-io/proxy:stable-2.7.1
 stable-2.7.1: Pulling from linkerd-io/proxy
 Digest: sha256:22af88a12d252f71a3aee148d32d727fe7161825cb4164776c04aa333a1dcd28
 Status: Image is up to date for linkerd-io/proxy:stable-2.7.1
-docker.io/linkerd-io/proxy:stable-2.7.1
+docker.repo.eng.netapp.com/linkerd-io/proxy:stable-2.7.1
 ```
-* Even though `docker.io/linkerd-io/proxy:stable-2.7.1` doesn't actually exist!
+* Even though an image with this FQDN doesn't actually exist!
 
 
