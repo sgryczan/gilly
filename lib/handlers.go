@@ -26,7 +26,7 @@ func HandleMutate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// mutate the request
-	mutated, err := Mutate(body, false)
+	mutated, err := Mutate(body, true)
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
