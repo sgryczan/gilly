@@ -473,6 +473,170 @@ func TestMutatesRequestInternalRegistry(t *testing.T) {
 	assert.Contains(t, rr.AuditAnnotations, "gilly")
 }
 
+func TestMutatesInitContainer(t *testing.T) {
+	rawJSON := `{
+		"kind": "AdmissionReview",
+		"apiVersion": "admission.k8s.io/v1beta1",
+		"request": {
+			"uid": "acc8b09b-11b9-47ab-ba16-e0bd92a61bbf",
+			"kind": {
+				"group": "",
+				"version": "v1",
+				"kind": "Pod"
+			},
+			"resource": {
+				"group": "",
+				"version": "v1",
+				"resource": "pods"
+			},
+			"requestKind": {
+				"group": "",
+				"version": "v1",
+				"kind": "Pod"
+			},
+			"requestResource": {
+				"group": "",
+				"version": "v1",
+				"resource": "pods"
+			},
+			"name": "gilly-init-test",
+			"namespace": "gilly",
+			"operation": "CREATE",
+			"userInfo": {
+				"username": "admin",
+				"uid": "admin",
+				"groups": [
+					"system:masters",
+					"system:authenticated"
+				]
+			},
+			"object": {
+				"kind": "Pod",
+				"apiVersion": "v1",
+				"metadata": {
+					"name": "gilly-init-test",
+					"namespace": "gilly",
+					"creationTimestamp": null,
+					"annotations": {
+						"kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"v1\",\"kind\":\"Pod\",\"metadata\":{\"annotations\":{},\"name\":\"gilly-init-test\",\"namespace\":\"gilly\"},\"spec\":{\"containers\":[{\"image\":\"nginx\",\"name\":\"nginx\",\"ports\":[{\"containerPort\":80}],\"volumeMounts\":[{\"mountPath\":\"/usr/share/nginx/html\",\"name\":\"workdir\"}]}],\"dnsPolicy\":\"Default\",\"initContainers\":[{\"command\":[\"wget\",\"-O\",\"/work-dir/index.html\",\"http://kubernetes.io\"],\"image\":\"busybox\",\"name\":\"install\",\"volumeMounts\":[{\"mountPath\":\"/work-dir\",\"name\":\"workdir\"}]}],\"volumes\":[{\"emptyDir\":{},\"name\":\"workdir\"}]}}\n"
+					}
+				},
+				"spec": {
+					"volumes": [
+						{
+							"name": "workdir",
+							"emptyDir": {}
+						},
+						{
+							"name": "default-token-79pmn",
+							"secret": {
+								"secretName": "default-token-79pmn"
+							}
+						}
+					],
+					"initContainers": [
+						{
+							"name": "install",
+							"image": "busybox",
+							"command": [
+								"wget",
+								"-O",
+								"/work-dir/index.html",
+								"http://kubernetes.io"
+							],
+							"resources": {},
+							"volumeMounts": [
+								{
+									"name": "workdir",
+									"mountPath": "/work-dir"
+								},
+								{
+									"name": "default-token-79pmn",
+									"readOnly": true,
+									"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+								}
+							],
+							"terminationMessagePath": "/dev/termination-log",
+							"terminationMessagePolicy": "File",
+							"imagePullPolicy": "Always"
+						}
+					],
+					"containers": [
+						{
+							"name": "nginx",
+							"image": "nginx",
+							"ports": [
+								{
+									"containerPort": 80,
+									"protocol": "TCP"
+								}
+							],
+							"resources": {},
+							"volumeMounts": [
+								{
+									"name": "workdir",
+									"mountPath": "/usr/share/nginx/html"
+								},
+								{
+									"name": "default-token-79pmn",
+									"readOnly": true,
+									"mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+								}
+							],
+							"terminationMessagePath": "/dev/termination-log",
+							"terminationMessagePolicy": "File",
+							"imagePullPolicy": "Always"
+						}
+					],
+					"restartPolicy": "Always",
+					"terminationGracePeriodSeconds": 30,
+					"dnsPolicy": "Default",
+					"serviceAccountName": "default",
+					"serviceAccount": "default",
+					"securityContext": {},
+					"schedulerName": "default-scheduler",
+					"tolerations": [
+						{
+							"key": "node.kubernetes.io/not-ready",
+							"operator": "Exists",
+							"effect": "NoExecute",
+							"tolerationSeconds": 300
+						},
+						{
+							"key": "node.kubernetes.io/unreachable",
+							"operator": "Exists",
+							"effect": "NoExecute",
+							"tolerationSeconds": 300
+						}
+					],
+					"priority": 0,
+					"enableServiceLinks": true
+				},
+				"status": {}
+			},
+			"oldObject": null,
+			"dryRun": false,
+			"options": {
+				"kind": "CreateOptions",
+				"apiVersion": "meta.k8s.io/v1"
+			}
+		}
+	}`
+
+	response, err := Mutate([]byte(rawJSON), false)
+	if err != nil {
+		t.Errorf("failed to mutate AdmissionRequest %s with error %s", string(response), err)
+	}
+
+	r := v1beta1.AdmissionReview{}
+	err = json.Unmarshal(response, &r)
+	assert.NoError(t, err, "failed to unmarshal with error %s", err)
+
+	rr := r.Response
+	assert.Equal(t, `[{"op":"replace","path":"/spec/containers/0/image","value":"docker.repo.eng.netapp.com/nginx"},{"op":"add","path":"/metadata/annotations/gilly-original-image","value":"nginx"},{"op":"replace","path":"/spec/initContainers/0/image","value":"docker.repo.eng.netapp.com/busybox"},{"op":"add","path":"/metadata/annotations/gilly-original-image","value":"busybox"}]`, string(rr.Patch))
+	assert.Contains(t, rr.AuditAnnotations, "gilly")
+}
+
 func TestErrorsOnInvalidJson(t *testing.T) {
 	rawJSON := `Wut ?`
 	_, err := Mutate([]byte(rawJSON), false)
