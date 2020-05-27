@@ -13,10 +13,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+var DefaultRegistry string
+
 // Mutate mutates
 func Mutate(body []byte, verbose bool) ([]byte, error) {
 	if verbose {
 		log.Printf("recv: %s\n", string(body)) // untested section
+	}
+	if DefaultRegistry == "" {
+		DefaultRegistry = "docker.repo.eng.netapp.com"
 	}
 
 	// unmarshal request into AdmissionReview struct
@@ -48,7 +53,7 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 			"gilly": "review complete",
 		}
 
-		patch := ProcessPod(pod)
+		patch := ProcessPod(pod, DefaultRegistry)
 
 		resp.Patch, err = json.Marshal(patch)
 
@@ -68,10 +73,6 @@ func Mutate(body []byte, verbose bool) ([]byte, error) {
 	}
 
 	return responseBody, nil
-}
-
-func checkContainer(c *corev1.Container) {
-	return
 }
 
 // GetImageRegistry accepts an image name and returns it's registry
@@ -106,9 +107,9 @@ func ReplaceImageRegistry(image string, registry string) (string, error) {
 	return result, nil
 }
 
-// ProcessPod accepts a pod and returns a Patch specifying fields
+// ProcessPod accepts a pod and returns a patch specifying fields
 // to be modified.
-func ProcessPod(pod *corev1.Pod) []map[string]string {
+func ProcessPod(pod *corev1.Pod, targetRegistry string) []map[string]string {
 	patches := []map[string]string{}
 
 	// Process Containers
@@ -118,7 +119,7 @@ func ProcessPod(pod *corev1.Pod) []map[string]string {
 			log.Printf("[ProcessPod]  Found registry => %s", registry)
 			if !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
 				log.Printf("[ProcessPod] image registry for container %s is %s - updating", c.Name, registry)
-				patchedRegistry, _ := ReplaceImageRegistry(c.Image, "docker.repo.eng.netapp.com")
+				patchedRegistry, _ := ReplaceImageRegistry(c.Image, targetRegistry)
 				imagePatch := genPatch("replace", fmt.Sprintf("/spec/containers/%d/image", i), patchedRegistry)
 				patches = append(patches, imagePatch)
 				annotationPatch := genPatch("add", "/metadata/annotations/gilly-original-image", c.Image)
@@ -135,7 +136,7 @@ func ProcessPod(pod *corev1.Pod) []map[string]string {
 			log.Printf("[ProcessPod]  Found registry => %s", registry)
 			if !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
 				log.Printf("[ProcessPod] image registry for container %s is %s - updating", c.Name, registry)
-				patchedRegistry, _ := ReplaceImageRegistry(c.Image, "docker.repo.eng.netapp.com")
+				patchedRegistry, _ := ReplaceImageRegistry(c.Image, targetRegistry)
 				imagePatch := genPatch("replace", fmt.Sprintf("/spec/initContainers/%d/image", i), patchedRegistry)
 				patches = append(patches, imagePatch)
 
