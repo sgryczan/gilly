@@ -5,6 +5,47 @@
 
 Gilly is a tool meant for fixing Kubernetes workloads for hosts running under BigTop, that reference images from gcr.io or quay.io.
 
+## Quick start
+1. Build Image: `make build-bigtop`
+2. Deploy to your cluster: `kubectl apply -f deploy/stack.yml`
+
+## Installation
+**Requirements**:
+* A running k8s cluster
+* `kubectl` installed and configured to access above cluster
+
+**Provision certificates**
+
+All requests from the cluster control plane to the application must be made over HTTPS. In order to achieve this, we'll need to provision a certificate from our cluster, which gilly will be configured to use.
+
+To do this, run `make ssl`:
+```
+make -C ssl cert
+... creating gilly.key
+Generating RSA private key, 2048 bit long modulus
+............+++
+......................................................................................................+++
+e is 65537 (0x10001)
+... creating gilly.csr
+openssl req -new -key gilly.key -subj "/CN=gilly.gilly.svc" -out gilly.csr -config csr.conf
+... deleting existing csr, if any
+kubectl delete csr gilly.gilly.svc || :
+Error from server (NotFound): certificatesigningrequests.certificates.k8s.io "gilly.gilly.svc" not found
+... creating kubernetes CSR object
+kubectl create -f -
+certificatesigningrequest.certificates.k8s.io/gilly.gilly.svc created
+... waiting for csr to be present in kubernetes
+kubectl get csr gilly.gilly.svc
+certificatesigningrequest.certificates.k8s.io/gilly.gilly.svc approved
+... waiting for serverCert to be present in kubernetes
+kubectl get csr gilly.gilly.svc -o jsonpath='{.status.certificate}'
+... creating gilly.pem cert file
+$serverCert | openssl base64 -d -A -out gilly.pem
+```
+
+**Build the application image**
+
+
 ### Why?
 Under the BigTop, images cannot be pulled from popular Docker registries such as gcr.io or quay.io
 
