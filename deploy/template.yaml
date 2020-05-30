@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
         - name: gilly
-          image: sgryczan/gilly:0.1.0
+          image: docker.repo.eng.netapp.com/sgryczan/gilly:IMAGE_VERSION
           imagePullPolicy: Always
           resources:
             limits:
