@@ -1,20 +1,30 @@
-VERSION=0.1.0
+VERSION=0.1.3
 
 build: ssl build-image template
 
 build-bigtop: ssl build-image-bigtop template
 
+deploy:
+	kubectl apply -f deploy/stack.yaml
+
+deploy-cleanup:
+	kubectl delete -f deploy/stack.yaml
+
 build-image:
 	docker build -t sgryczan/gilly:$(VERSION) .
+	sed "s/KUBE_CA_BUNDLE/$(make -s kube-get-ca-bundle)/" deploy/template.yaml > deploy/stack.yaml
 
 build-image-bigtop:
-	docker build -t sgryczan/gilly:$(VERSION) -f Dockerfile.bigtop .
+	docker build -t sf-artifactory.solidfire.net:9004/gilly:$(VERSION) -f Dockerfile.bigtop .
+
+push-image-bigtop:
+	docker push sf-artifactory.solidfire.net:9004/gilly:$(VERSION)
 
 ssl:
 	make -C ssl cert
 
 template:
-	sed "s/KUBE_CA_BUNDLE/$(make -s kube-get-ca-bundle)/" deploy/template.yaml > deploy/stack.yaml
+	sed "s/KUBE_CA_BUNDLE/$(shell make -s kube-get-ca-bundle)/; s/IMAGE_VERSION/$(VERSION)/" deploy/template.yaml > deploy/stack.yaml
 
 push:
 	docker push sgryczan/gilly:$(VERSION) 
@@ -33,7 +43,7 @@ k3d-deps:
 k3d-build:
 	make ssl && \
 	make build-image-bigtop && \
-	k3d import-images sgryczan/gilly:$(VERSION) && \
-	make k3d-deps
+	k3d import-images sf-artifactory.solidfire.net:9004/gilly:$(VERSION) && \
+	make template
 
-.PHONY: build build-bigtop build-image build-image-bigtop ssl push build-bin kube-get-ca-bundle k3d-deps k3d-build
+.PHONY: build build-bigtop build-image build-image-bigtop ssl push build-bin kube-get-ca-bundle k3d-deps k3d-build template deploy
