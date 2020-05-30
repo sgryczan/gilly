@@ -122,8 +122,8 @@ func ProcessPod(pod *corev1.Pod, targetRegistry string) []map[string]string {
 				patchedRegistry, _ := ReplaceImageRegistry(c.Image, targetRegistry)
 				imagePatch := genPatch("replace", fmt.Sprintf("/spec/containers/%d/image", i), patchedRegistry)
 				patches = append(patches, imagePatch)
-				annotationPatch := genPatch("add", "/metadata/annotations/gilly-original-image", c.Image)
-				patches = append(patches, annotationPatch)
+				/* annotationPatch := genPatch("add", "/metadata/annotations/gilly-original-image", c.Image)
+				patches = append(patches, annotationPatch) */
 				log.Printf("[ProcessPod] updated registry for container %s to %s", c.Name, patchedRegistry)
 			}
 		}
@@ -140,8 +140,8 @@ func ProcessPod(pod *corev1.Pod, targetRegistry string) []map[string]string {
 				imagePatch := genPatch("replace", fmt.Sprintf("/spec/initContainers/%d/image", i), patchedRegistry)
 				patches = append(patches, imagePatch)
 
-				annotationPatch := genPatch("add", "/metadata/annotations/gilly-original-image", c.Image)
-				patches = append(patches, annotationPatch)
+				/* annotationPatch := genPatch("add", "/metadata/annotations/gilly-original-image", c.Image)
+				patches = append(patches, annotationPatch) */
 
 				log.Printf("[ProcessPod] updated registry for container %s to %s", c.Name, patchedRegistry)
 			}
