@@ -5,14 +5,15 @@
 
 Gilly is a tool meant for fixing Kubernetes workloads for hosts running under BigTop, that reference images from gcr.io or quay.io.
 
-## Quick start
-1. Build Image: `make build-bigtop`
-2. Deploy to your cluster: `kubectl apply -f deploy/stack.yml`
-
 ## Installation
 **Requirements**:
 * A running k8s cluster
 * `kubectl` installed and configured to access above cluster
+
+## Quick start
+1. Build Image: `make build-bigtop`
+2. Deploy to your cluster: `kubectl apply -f deploy/stack.yml`
+
 
 **Provision certificates**
 
@@ -43,10 +44,29 @@ kubectl get csr gilly.gilly.svc -o jsonpath='{.status.certificate}'
 $serverCert | openssl base64 -d -A -out gilly.pem
 ```
 
-**Build the application image**
+**Build the Template**
 
+Next, render the deployment template with `make template`:
+```
+sed "s/KUBE_CA_BUNDLE/LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJWakNCL3FBREFnRUNBZ0VBTUFvR0NDcUdTTTQ5QkFNQ01DTXhJVEFmQmdOVkJBTU1HR3N6Y3kxelpYSjIKWlhJdFkyRkFNVFU0T1RreU56RTRNakFlRncweU1EQTFNVGt5TWpJMk1qSmFGdzB6TURBMU1UY3lNakkyTWpKYQpNQ014SVRBZkJnTlZCQU1NR0dzemN5MXpaWEoyWlhJdFkyRkFNVFU0T1RreU56RTRNakJaTUJNR0J5cUdTTTQ5CkFnRUdDQ3FHU000OUF3RUhBMElBQkc0bFZ4Q2N6SCs1bVB1Und6NVhXcEJxTXVYNEN6cTFKdVhYeWNFODBKVFAKdlNtbk96VWtEbDlLdzRyUWhFVm01MkRSY1RKRGliTjhzdGdzUmtaWHRPdWpJekFoTUE0R0ExVWREd0VCL3dRRQpBd0lDcERBUEJnTlZIUk1CQWY4RUJUQURBUUgvTUFvR0NDcUdTTTQ5QkFNQ0EwY0FNRVFDSUVTRXNadnc5akcxCmwzZFBkWkV5b3Z4S2ZYMkJtT1c4akpzcXZQZC8wYTd5QWlBRWY0YVVLaUNMNnJtVU9SWnB4UkZCQk5HSkZFSFAKb3VuV1VUT0lnQkh4QkE9PQotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0tCg==/; s/IMAGE_VERSION/0.1.6/; s/IMAGE_REGISTRY/docker.repo.eng.netapp.com\/sgryczan/; s/IMAGE_NAME/gilly/" deploy/template.yaml > deploy/stack.yaml
+kubectl create secret generic gilly-certs \
+                --from-file=./ssl/gilly.pem --from-file ./ssl/gilly.key -n gilly --dry-run -o yaml >> deploy/stack.yaml
+```
 
-### Why?
+**Deploy the Stack**
+
+Finally, deploy the stack to your cluster with `make deploy`:
+```
+gilly git:(master)$ make deploy
+kubectl apply -f deploy/stack.yaml
+namespace/gilly created
+service/gilly created
+deployment.apps/gilly created
+mutatingwebhookconfiguration.admissionregistration.k8s.io/gilly created
+secret/gilly-certs created
+```
+
+### Why does this exist?
 Under the BigTop, images cannot be pulled from popular Docker registries such as gcr.io or quay.io
 
 So, if we have a pod with the following spec:
@@ -57,7 +77,7 @@ metadata:
   name: myapp
 spec:
   - name: myapp
-    image: gcr.io/sgryczan/ansible-runner:0.0.0
+    image: gcr.io/sgryczan/rocket:latest
 ```
 
 This will fail with an error like this:
@@ -65,6 +85,29 @@ This will fail with an error like this:
 NAME    READY   STATUS              RESTARTS   AGE
 myapp   0/1     ImagePullBackOff    2          3m30s
 ```
+
+Ordinarily, we can fix this issue by updating the `image:` field of our manifest to reference an interally-reachable repository:
+
+```
+spec:
+  - name: myapp
+    image: docker.repo.eng.netapp.com/sgryczan/rocket:latest
+```
+
+However, in an environment with hundreds of workloads, this represents a significant effort. In addition, using upstream templating tools like `helm` or `kustomize` may not always offer a parameter for overriding every image included in the template or chart.
+
+Gilly removes the need to do this, by automatically rewriting the `image:` field on pods in real-time, as they are scheduled. Using our example above, Gilly will automatically rewrite `gcr.io/sgryczan/rocket:latest` to `docker.repo.eng.netapp.com/sgryczan/rocket:latest`, allowing the image to be pulled successfully:
+```
+2020/06/03 16:40:46 [Gilly]  started v0.1.6
+2020/06/03 16:41:06 [Mutate]  Received POD create event. Name: myapp2, Namespace: flux
+2020/06/03 16:41:06 [ProcessPod]  Found registry => gcr.io
+2020/06/03 16:41:06 [ProcessPod] image registry for container myapp is gcr.io - updating
+2020/06/03 16:41:06 [ReplaceImageRegistry]  Replacing registry for image gcr.io/sgryczan/rocket:latest with docker.repo.eng.netapp.com
+2020/06/03 16:41:06 [ReplaceImageRegistry]  Image gcr.io/sgryczan/rocket:latest => docker.repo.eng.netapp.com/sgryczan/rocket:latest
+2020/06/03 16:41:06 [ProcessPod] updated registry for container myapp to docker.repo.eng.netapp.com/sgryczan/rocket:latest
+```
+
+It does this without the need to modify the `image:` tag in the original manifest.
 
 ### How Gilly Works
 Gilly runs registers itself as an API against it's cluster, using a Mutating Admission Webhook. Essentially, it instructs the Kubernetes API to notify the api every time a pod is created in the cluster. The API will send an AdmissionReview, including the spec of the Pod to be created. Gilly will modify the image field of these new pods automatically, and will respond to the API server with an AdmissionResponse, specifying how the image fields in the Pod definition should be modified.
