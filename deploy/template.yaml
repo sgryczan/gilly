@@ -40,7 +40,7 @@ spec:
     spec:
       containers:
         - name: gilly
-          image: docker.repo.eng.netapp.com/sgryczan/gilly:IMAGE_VERSION
+          image: IMAGE_REGISTRY/IMAGE_NAME:IMAGE_VERSION
           imagePullPolicy: Always
           resources:
             limits:
@@ -49,6 +49,13 @@ spec:
             requests:
               cpu: 250m
               memory: 64Mi
+          volumeMounts:
+            - mountPath: /go/bin/ssl
+              name: certs
+      volumes:
+        - name:  certs
+          secret:
+            secretName: gilly-certs
 
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -78,3 +85,4 @@ webhooks:
     #namespaceSelector:
     #  matchLabels:
     #    gilly: enabled
+---
