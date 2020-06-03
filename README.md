@@ -1,5 +1,5 @@
 # Gilly
-![](./img/logo.png)
+![](./img/logo2.png)
 
 *noun; a truck or wagon used to transport the equipment of a circus or carnival.*
 
