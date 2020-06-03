@@ -117,7 +117,7 @@ func ProcessPod(pod *corev1.Pod, targetRegistry string) []map[string]string {
 		for i, c := range pod.Spec.Containers {
 			registry := GetImageRegistry(c.Image)
 			log.Printf("[ProcessPod]  Found registry => %s", registry)
-			if !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
+			if !(strings.Contains(registry, "sf-artifactory.")) {
 				log.Printf("[ProcessPod] image registry for container %s is %s - updating", c.Name, registry)
 				patchedRegistry, _ := ReplaceImageRegistry(c.Image, targetRegistry)
 				imagePatch := genPatch("replace", fmt.Sprintf("/spec/containers/%d/image", i), patchedRegistry)
@@ -134,7 +134,7 @@ func ProcessPod(pod *corev1.Pod, targetRegistry string) []map[string]string {
 		for i, c := range pod.Spec.InitContainers {
 			registry := GetImageRegistry(c.Image)
 			log.Printf("[ProcessPod]  Found registry => %s", registry)
-			if !(strings.Contains(registry, "sf-artifactory.solidfire.net")) {
+			if !(strings.Contains(registry, "sf-artifactory.")) {
 				log.Printf("[ProcessPod] image registry for container %s is %s - updating", c.Name, registry)
 				patchedRegistry, _ := ReplaceImageRegistry(c.Image, targetRegistry)
 				imagePatch := genPatch("replace", fmt.Sprintf("/spec/initContainers/%d/image", i), patchedRegistry)

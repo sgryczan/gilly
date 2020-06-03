@@ -249,7 +249,7 @@ func TestMutatesRequestInternetRegistry(t *testing.T) {
 	assert.NoError(t, err, "failed to unmarshal with error %s", err)
 
 	rr := r.Response
-	assert.Equal(t, `[{"op":"replace","path":"/spec/containers/0/image","value":"docker.repo.eng.netapp.com/sgryczan/rocket:latest"},{"op":"add","path":"/metadata/annotations/gilly-original-image","value":"gcr.io/sgryczan/rocket:latest"}]`, string(rr.Patch))
+	assert.Equal(t, `[{"op":"replace","path":"/spec/containers/0/image","value":"docker.repo.eng.netapp.com/sgryczan/rocket:latest"}]`, string(rr.Patch))
 	assert.Contains(t, rr.AuditAnnotations, "gilly")
 }
 
@@ -359,7 +359,7 @@ func TestMutatesRequestNoRegistry(t *testing.T) {
 	assert.NoError(t, err, "failed to unmarshal with error %s", err)
 
 	rr := r.Response
-	assert.Equal(t, "[{\"op\":\"replace\",\"path\":\"/spec/containers/0/image\",\"value\":\"docker.repo.eng.netapp.com/sgryczan/rocket:latest\"},{\"op\":\"add\",\"path\":\"/metadata/annotations/gilly-original-image\",\"value\":\"sgryczan/rocket:latest\"}]", string(rr.Patch))
+	assert.Equal(t, "[{\"op\":\"replace\",\"path\":\"/spec/containers/0/image\",\"value\":\"docker.repo.eng.netapp.com/sgryczan/rocket:latest\"}]", string(rr.Patch))
 	assert.Contains(t, rr.AuditAnnotations, "gilly")
 }
 
@@ -633,7 +633,7 @@ func TestMutatesInitContainer(t *testing.T) {
 	assert.NoError(t, err, "failed to unmarshal with error %s", err)
 
 	rr := r.Response
-	assert.Equal(t, `[{"op":"replace","path":"/spec/containers/0/image","value":"docker.repo.eng.netapp.com/nginx"},{"op":"add","path":"/metadata/annotations/gilly-original-image","value":"nginx"},{"op":"replace","path":"/spec/initContainers/0/image","value":"docker.repo.eng.netapp.com/busybox"},{"op":"add","path":"/metadata/annotations/gilly-original-image","value":"busybox"}]`, string(rr.Patch))
+	assert.Equal(t, `[{"op":"replace","path":"/spec/containers/0/image","value":"docker.repo.eng.netapp.com/nginx"},{"op":"replace","path":"/spec/initContainers/0/image","value":"docker.repo.eng.netapp.com/busybox"}]`, string(rr.Patch))
 	assert.Contains(t, rr.AuditAnnotations, "gilly")
 }
 
@@ -664,6 +664,7 @@ func TestGetImageRegistry(t *testing.T) {
 		{"docker.io/iwilltry42/k3d-tools", "docker.io"},
 		{"sgryczan/rocket", "docker.io"},
 		{"busybox", "docker.io"},
+		{"docker.repo.eng.netapp.com/global/devts-daas/jenkins", "docker.repo.eng.netapp.com"},
 	}
 	for _, test := range cases {
 		if r := GetImageRegistry(test.input); r != test.expected {
@@ -679,6 +680,7 @@ func TestReplaceImageRegistry(t *testing.T) {
 		{"python", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/python"},
 		{"library/python", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/library/python"},
 		{"quay.io/some-owner/image-name", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/some-owner/image-name"},
+		{"docker.repo.eng.netapp.com/global/devts-daas/jenkins", "docker.repo.eng.netapp.com", "docker.repo.eng.netapp.com/global/devts-daas/jenkins"},
 	}
 	for _, test := range cases {
 		if r, err := ReplaceImageRegistry(test.inputImage, test.inputRegistry); r != test.expected || err != nil {
