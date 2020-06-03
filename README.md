@@ -11,9 +11,9 @@ Gilly is a tool meant for fixing Kubernetes workloads for hosts running under Bi
 * `kubectl` installed and configured to access above cluster
 
 ## Quick start
-1. Build Image: `make build-bigtop`
-2. Deploy to your cluster: `kubectl apply -f deploy/stack.yml`
+`make install`
 
+## Detail
 
 **Provision certificates**
 
