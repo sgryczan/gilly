@@ -1,9 +1,17 @@
 # Gilly
+*noun; a truck or wagon used to transport the equipment of a circus or carnival.*
 ![](./img/logo2.png)
 
-*noun; a truck or wagon used to transport the equipment of a circus or carnival.*
 
-Gilly is a tool meant for fixing Kubernetes workloads for hosts running under BigTop, that reference images from gcr.io or quay.io.
+Gilly is a tool meant for fixing Kubernetes workloads for hosts running under BigTop, that reference images from popular public registries:
+* Docker Hub - https://registry-1.docker.io/
+* Elastic Docker - https://docker.elastic.co/
+* Google Cloud - https://gcr.io/
+* Google Kubernetes - https://k8s.gcr.io/
+* Microsoft - https://mcr.microsoft.com/
+* OpenSUSE - https://registry.opensuse.org/
+* Quay - https://quay.io/
+* VMware - https://registry.tkg.vmware.run/
 
 ## Installation
 **Requirements**:
